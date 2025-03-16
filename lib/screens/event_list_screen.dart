@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:task_checker_flutter/models/Task.dart';
 import 'package:task_checker_flutter/screens/add_edit_task_screen.dart';
+import 'package:flutter/services.dart';
 
 class EventListScreen extends StatefulWidget {
   static const String id = 'EventListScreen';
@@ -15,11 +16,26 @@ class _EventListScreenState extends State<EventListScreen> {
   // List to store tasks
   final List<Task> _tasks = [];
 
+  // View mode state (list or grid)
+  bool _isGridView = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Task Checker'),
+        actions: [
+          // Toggle between list and grid view
+          IconButton(
+            icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
+            tooltip: _isGridView ? 'List View' : 'Grid View',
+            onPressed: () {
+              setState(() {
+                _isGridView = !_isGridView;
+              });
+            },
+          ),
+        ],
       ),
       body: _tasks.isEmpty
           ? const Center(
@@ -28,11 +44,9 @@ class _EventListScreenState extends State<EventListScreen> {
           style: TextStyle(fontSize: 18),
         ),
       )
-          : ReorderableListView(
-        padding: const EdgeInsets.only(top: 8.0),
-        onReorder: _reorderTask,
-        children: _buildTaskItems(),
-      ),
+          : _isGridView
+          ? _buildGridView()
+          : _buildListView(),
       floatingActionButton: FloatingActionButton(
         onPressed: _addTask,
         tooltip: 'Add Task',
@@ -41,29 +55,40 @@ class _EventListScreenState extends State<EventListScreen> {
     );
   }
 
-  // Build the list of task items
-  List<Widget> _buildTaskItems() {
-    return List.generate(_tasks.length, (index) {
-      final task = _tasks[index];
-      return Dismissible(
-        key: ValueKey(index), // Using index as key ensures uniqueness
-        direction: DismissDirection.none, // Disable swipe to dismiss
-        child: Card(
-          margin: const EdgeInsets.only(
-            left: 16.0,
-            right: 16.0,
-            bottom: 8.0,
+  // Build list view of tasks with reordering
+  Widget _buildListView() {
+    return ReorderableListView.builder(
+      itemCount: _tasks.length,
+      onReorder: (oldIndex, newIndex) {
+        setState(() {
+          if (oldIndex < newIndex) {
+            newIndex -= 1;
+          }
+          final Task item = _tasks.removeAt(oldIndex);
+          _tasks.insert(newIndex, item);
+        });
+
+        // Provide haptic feedback when reordering
+        HapticFeedback.mediumImpact();
+      },
+      itemBuilder: (context, index) {
+        final task = _tasks[index];
+        return Card(
+          key: ValueKey(task.name + index.toString()),
+          margin: const EdgeInsets.symmetric(
+            horizontal: 16.0,
+            vertical: 8.0,
           ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
             title: Text(
               task.name,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: Text(task.description),
+            leading: ReorderableDragStartListener(
+              index: index,
+              child: const Icon(Icons.drag_handle),
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -76,7 +101,6 @@ class _EventListScreenState extends State<EventListScreen> {
                   ),
                   child: Text('${task.clickCount}'),
                 ),
-                const SizedBox(width: 8),
                 // Add 3-dots menu
                 PopupMenuButton<String>(
                   onSelected: (value) => _handleMenuSelection(value, task),
@@ -91,14 +115,6 @@ class _EventListScreenState extends State<EventListScreen> {
                     ),
                   ],
                 ),
-                // Add reorder handle
-                ReorderableDragStartListener(
-                  index: index,
-                  child: const Icon(
-                    Icons.drag_handle,
-                    color: Colors.grey,
-                  ),
-                ),
               ],
             ),
             onTap: () {
@@ -108,29 +124,142 @@ class _EventListScreenState extends State<EventListScreen> {
               });
             },
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 
-  // Reorder task in the list
-  void _reorderTask(int oldIndex, int newIndex) {
-    setState(() {
-      if (oldIndex < newIndex) {
-        // Removing the item at oldIndex will shorten the list by 1
-        newIndex -= 1;
-      }
-      final Task task = _tasks.removeAt(oldIndex);
-      _tasks.insert(newIndex, task);
+  // Build grid view of tasks
+  Widget _buildGridView() {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16.0),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,  // Two columns
+        childAspectRatio: 0.85,
+        crossAxisSpacing: 12.0,
+        mainAxisSpacing: 12.0,
+      ),
+      itemCount: _tasks.length,
+      itemBuilder: (context, index) {
+        final task = _tasks[index];
+        return Card(
+          key: ValueKey(task.name + index.toString()),
+          elevation: 2.0,
+          child: InkWell(
+            onTap: () {
+              // Increment click count
+              setState(() {
+                task.incrementClickCount();
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Task name and click count
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onLongPress: () {
+                                // Show a tip about reordering in list view
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Switch to list view for reordering'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                                // Switch to list view
+                                setState(() {
+                                  _isGridView = false;
+                                });
+                              },
+                              child: const Icon(Icons.drag_handle, size: 16, color: Colors.grey),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                task.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16.0,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 4.0),
+                      Container(
+                        padding: const EdgeInsets.all(6.0),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade100,
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        child: Text(
+                          '${task.clickCount}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
 
-      // Show confirmation of move
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Task "${task.name}" moved'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    });
+                  const Divider(height: 16.0),
+
+                  // Task description
+                  Expanded(
+                    child: Text(
+                      task.description,
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 14.0,
+                      ),
+                      maxLines: 5,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+
+                  // Actions row at the bottom
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Edit button
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 20),
+                        onPressed: task.clickCount >= 3
+                            ? () => _editTask(task)
+                            : () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'You need to click the task ${3 - task.clickCount} more time(s) before you can edit it.',
+                              ),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // Delete button
+                      IconButton(
+                        icon: const Icon(Icons.delete, size: 20),
+                        onPressed: () => _deleteTask(task),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   // Handle menu selection (edit or delete)
