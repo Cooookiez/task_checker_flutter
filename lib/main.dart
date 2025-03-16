@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:task_checker_flutter/services/notification_settings_service.dart';
 
 import 'screens/add_edit_task_screen.dart';
 import 'screens/event_list_screen.dart';
@@ -16,6 +17,12 @@ void main() async {
   // Initialize notifications
   await NotificationController.initializeLocalNotifications();
   await NotificationController.initializeIsolateReceivePort();
+
+  // Pre-load notification settings for quicker access later
+  // This is optional but may improve initial app loading experience
+  final settingsService = NotificationSettingsService();
+  await settingsService.getInterval();
+  await settingsService.getEnabled();
 
   runApp(const MyApp());
 }

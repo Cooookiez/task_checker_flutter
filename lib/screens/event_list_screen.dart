@@ -4,6 +4,7 @@ import 'package:task_checker_flutter/screens/add_edit_task_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:task_checker_flutter/services/notification_controller.dart';
 import 'package:task_checker_flutter/services/notification_service.dart';
+import 'package:task_checker_flutter/services/notification_settings_service.dart';
 
 import '../services/task_database_service.dart';
 
@@ -38,14 +39,8 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     // Register this class as an observer for app lifecycle changes
     WidgetsBinding.instance.addObserver(this);
 
-    // Ensure _intervalMinutes has a valid default value that exists in _intervalOptions
-    if (!_intervalOptions.contains(_intervalMinutes)) {
-      _intervalMinutes =
-      _intervalOptions.contains(5) ? 5 : _intervalOptions.first;
-    }
-
-    // Check if notifications are allowed
-    _checkNotificationPermissions();
+    // Load saved notification settings
+    _loadNotificationSettings();
 
     // Load tasks from database
     _loadTasks();
@@ -68,12 +63,40 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
+  // Load saved notification settings
+  Future<void> _loadNotificationSettings() async {
+    final settingsService = NotificationSettingsService();
+
+    // Load interval
+    final savedInterval = await settingsService.getInterval();
+    // Ensure the loaded interval is valid (exists in options)
+    final validInterval = _intervalOptions.contains(savedInterval)
+        ? savedInterval
+        : _intervalOptions.contains(5) ? 5 : _intervalOptions.first;
+
+    // Load enabled state
+    final isEnabled = await settingsService.getEnabled();
+
+    setState(() {
+      _intervalMinutes = validInterval;
+      _notificationsEnabled = isEnabled;
+    });
+
+    // Check if notifications are allowed by the system
+    _checkNotificationPermissions();
+  }
+
   // Check if notifications are allowed
   Future<void> _checkNotificationPermissions() async {
     final isAllowed = await NotificationService.checkPermissions();
+    final settingsService = NotificationSettingsService();
+
     setState(() {
       _notificationsEnabled = isAllowed;
     });
+
+    // Save the current permission state
+    await settingsService.saveEnabled(isAllowed);
 
     // If notifications are enabled, schedule app-wide notifications
     if (isAllowed) {
@@ -84,9 +107,14 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
   // Request notification permissions
   Future<void> _requestNotificationPermissions() async {
     final isAllowed = await NotificationService.requestPermissions();
+
     setState(() {
       _notificationsEnabled = isAllowed;
     });
+
+    // Save the enabled state
+    await NotificationSettingsService().saveEnabled(isAllowed);
+
     if (isAllowed) {
       _scheduleAppNotifications();
     }
@@ -180,6 +208,10 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                 setState(() {
                   _notificationsEnabled = false;
                 });
+
+                // Save the disabled state
+                NotificationSettingsService().saveEnabled(false);
+
                 // Cancel all scheduled notifications
                 NotificationService.cancelAllPeriodicNotifications();
               } else {
@@ -202,6 +234,10 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                 setState(() {
                   _intervalMinutes = newValue;
                 });
+
+                // Save the new interval
+                NotificationSettingsService().saveInterval(newValue);
+
                 // Reschedule notifications with the new interval
                 if (_notificationsEnabled) {
                   _scheduleAppNotifications();
@@ -261,9 +297,14 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                           ? 'minute'
                           : 'minutes'}',
                       onChanged: (double value) {
+                        final newInterval = value.round();
                         setState(() {
-                          _intervalMinutes = value.round();
+                          _intervalMinutes = newInterval;
                         });
+
+                        // Save the new interval
+                        NotificationSettingsService().saveInterval(newInterval);
+
                         // Reschedule notifications with the new interval
                         if (_notificationsEnabled) {
                           _scheduleAppNotifications();

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import '../screens/event_list_screen.dart';
 import 'notification_service.dart';
+import 'notification_settings_service.dart';
 
 class NotificationController {
   // Singleton pattern
@@ -66,10 +67,16 @@ class NotificationController {
     if (receivedAction.channelKey == 'task_checker_channel') {
       // If the app is in foreground
       if (MyApp.navigatorKey.currentState != null) {
+        // Instead of creating a new screen instance that resets state,
+        // we'll use pushNamed which will preserve the existing screen if it's already in the stack
+        // or navigate to it if it's not
         MyApp.navigatorKey.currentState!.pushNamedAndRemoveUntil(
           EventListScreen.id,
               (route) => route.isFirst,
         );
+
+        // Note: The state will be preserved because we're now loading it from
+        // persistent storage in the EventListScreen's initState
       }
     }
   }
@@ -97,10 +104,14 @@ class NotificationController {
 
   // Schedule app-wide periodic reminders
   static Future<void> scheduleAppReminders({
-    required int intervalMinutes,
+    int? intervalMinutes,
     String title = 'Task Reminder',
     String? message,
   }) async {
+    // If no interval is provided, load it from settings
+    int actualInterval = intervalMinutes ??
+        await NotificationSettingsService().getInterval();
+
     // Check if notifications are allowed
     bool isAllowed = await NotificationService.checkPermissions();
 
@@ -119,10 +130,10 @@ class NotificationController {
     await NotificationService.scheduleAppReminders(
       title: title,
       body: notificationMessage,
-      intervalMinutes: intervalMinutes,
+      intervalMinutes: actualInterval,
     );
 
-    debugPrint('Scheduled app-wide reminders every $intervalMinutes minutes');
+    debugPrint('Scheduled app-wide reminders every $actualInterval minutes');
   }
 
   // Send an immediate notification
