@@ -5,24 +5,17 @@ class Task {
   final String name;
   final String description;
   int clickCount;
-  DateTime? lastNotificationTime;
 
   Task({
     String? id,
     required this.name,
     required this.description,
     this.clickCount = 0,
-    this.lastNotificationTime,
   }) : id = id ?? const Uuid().v4();
 
   // Increment click count
   void incrementClickCount() {
     clickCount++;
-  }
-
-  // Update the last notification time
-  void updateLastNotificationTime() {
-    lastNotificationTime = DateTime.now();
   }
 
   // Convert from Map (like when receiving from form)
@@ -32,9 +25,6 @@ class Task {
       name: map['name'],
       description: map['description'],
       clickCount: map['clickCount'] ?? 0,
-      lastNotificationTime: map['lastNotificationTime'] != null
-          ? DateTime.parse(map['lastNotificationTime'])
-          : null,
     );
   }
 
@@ -45,7 +35,6 @@ class Task {
       'name': name,
       'description': description,
       'clickCount': clickCount,
-      'lastNotificationTime': lastNotificationTime?.toIso8601String(),
     };
   }
 }

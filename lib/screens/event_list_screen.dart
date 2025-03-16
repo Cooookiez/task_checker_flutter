@@ -38,7 +38,8 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
 
     // Ensure _intervalMinutes has a valid default value that exists in _intervalOptions
     if (!_intervalOptions.contains(_intervalMinutes)) {
-      _intervalMinutes = _intervalOptions.contains(5) ? 5 : _intervalOptions.first;
+      _intervalMinutes =
+      _intervalOptions.contains(5) ? 5 : _intervalOptions.first;
     }
 
     // Check if notifications are allowed
@@ -58,7 +59,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
 
     // When app resumes from background, schedule notifications based on current interval
     if (state == AppLifecycleState.resumed) {
-      _scheduleNotificationsForAllTasks();
+      _scheduleAppNotifications();
     }
   }
 
@@ -68,6 +69,11 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     setState(() {
       _notificationsEnabled = isAllowed;
     });
+
+    // If notifications are enabled, schedule app-wide notifications
+    if (isAllowed) {
+      _scheduleAppNotifications();
+    }
   }
 
   // Request notification permissions
@@ -77,57 +83,75 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
       _notificationsEnabled = isAllowed;
     });
     if (isAllowed) {
-      _scheduleNotificationsForAllTasks();
+      _scheduleAppNotifications();
     }
   }
 
-  // Schedule notifications for all tasks
-  void _scheduleNotificationsForAllTasks() {
+  // Schedule app-wide notifications with the current interval
+  void _scheduleAppNotifications() {
     if (!_notificationsEnabled) return;
 
-    for (final task in _tasks) {
-      _scheduleTaskNotification(task);
+    // Only schedule notifications if there are tasks
+    if (_tasks.isNotEmpty) {
+      NotificationController.scheduleAppReminders(
+        intervalMinutes: _intervalMinutes,
+        title: 'Task Reminder',
+        message: _getNotificationMessage(),
+      );
+    } else {
+      // If there are no tasks, cancel any scheduled notifications
+      NotificationService.cancelAllPeriodicNotifications();
     }
   }
 
-  // Schedule notification for a specific task
-  void _scheduleTaskNotification(Task task) {
-    NotificationController.scheduleTaskReminder(
-      taskId: task.id,
-      taskName: task.name,
-      taskDescription: task.description,
-      intervalMinutes: _intervalMinutes,
-    );
+  // Get a message for notifications based on the number of tasks
+  String _getNotificationMessage() {
+    if (_tasks.isEmpty) {
+      return 'No tasks yet. Add some tasks to get started!';
+    } else if (_tasks.length == 1) {
+      return 'You have 1 task to check: ${_tasks.first.name}';
+    } else {
+      return 'You have ${_tasks.length} tasks to check';
+    }
+  }
 
-    // Update the last notification time
-    setState(() {
-      task.updateLastNotificationTime();
-    });
+  // Send an immediate app-wide notification
+  void _sendImmediateNotification() {
+    if (!_notificationsEnabled) {
+      _showEnableNotificationsDialog();
+      return;
+    }
+
+    NotificationController.sendImmediateNotification(
+      title: 'Task Reminder',
+      message: _getNotificationMessage(),
+    );
   }
 
   // Show dialog to enable notifications
   void _showEnableNotificationsDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enable Notifications'),
-        content: const Text(
-            'Notifications are currently disabled. Would you like to enable them to receive task reminders?'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
+      builder: (context) =>
+          AlertDialog(
+            title: const Text('Enable Notifications'),
+            content: const Text(
+                'Notifications are currently disabled. Would you like to enable them to receive task reminders?'
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('CANCEL'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _requestNotificationPermissions();
+                },
+                child: const Text('ENABLE'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _requestNotificationPermissions();
-            },
-            child: const Text('ENABLE'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -151,6 +175,8 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                 setState(() {
                   _notificationsEnabled = false;
                 });
+                // Cancel all scheduled notifications
+                NotificationService.cancelAllPeriodicNotifications();
               } else {
                 // Request permissions
                 _requestNotificationPermissions();
@@ -160,7 +186,10 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
 
           // Interval selection dropdown
           DropdownButton<int>(
-            value: _intervalOptions.contains(_intervalMinutes) ? _intervalMinutes : _intervalOptions[2], // Default to 5 if current value is not in options
+            value: _intervalOptions.contains(_intervalMinutes)
+                ? _intervalMinutes
+                : _intervalOptions[2],
+            // Default to 5 if current value is not in options
             icon: const Icon(Icons.timer),
             underline: Container(),
             onChanged: (int? newValue) {
@@ -170,7 +199,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                 });
                 // Reschedule notifications with the new interval
                 if (_notificationsEnabled) {
-                  _scheduleNotificationsForAllTasks();
+                  _scheduleAppNotifications();
                 }
               }
             },
@@ -203,15 +232,17 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
             child: Row(
               children: [
                 const Text(
-                  'Time Interval:',
+                  'Reminder Interval:',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10.0),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 20.0),
+                      thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 10.0),
+                      overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 20.0),
                       valueIndicatorShape: const PaddleSliderValueIndicatorShape(),
                       showValueIndicator: ShowValueIndicator.always,
                     ),
@@ -219,15 +250,18 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                       value: _intervalMinutes.toDouble(),
                       min: 1,
                       max: 60,
-                      divisions: 59,  // 1 minute increments (60-1 = 59 divisions)
-                      label: '$_intervalMinutes ${_intervalMinutes == 1 ? 'minute' : 'minutes'}',
+                      divisions: 59,
+                      // 1 minute increments (60-1 = 59 divisions)
+                      label: '$_intervalMinutes ${_intervalMinutes == 1
+                          ? 'minute'
+                          : 'minutes'}',
                       onChanged: (double value) {
                         setState(() {
                           _intervalMinutes = value.round();
                         });
                         // Reschedule notifications with the new interval
                         if (_notificationsEnabled) {
-                          _scheduleNotificationsForAllTasks();
+                          _scheduleAppNotifications();
                         }
                       },
                     ),
@@ -247,7 +281,8 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
           // Notification status indicator
           if (!_notificationsEnabled)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0, vertical: 8.0),
               child: Card(
                 color: Colors.amber.shade100,
                 child: Padding(
@@ -324,42 +359,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
               task.name,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(task.description),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.timer, size: 16, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Interval: $_intervalMinutes minutes',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-                if (task.lastNotificationTime != null) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.notifications, size: 16, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Last notification: ${_formatDateTime(task.lastNotificationTime!)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
+            subtitle: Text(task.description),
             leading: ReorderableDragStartListener(
               index: index,
               child: const Icon(Icons.drag_handle),
@@ -379,10 +379,11 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                 // Add 3-dots menu
                 PopupMenuButton<String>(
                   onSelected: (value) => _handleMenuSelection(value, task),
-                  itemBuilder: (BuildContext context) => [
+                  itemBuilder: (BuildContext context) =>
+                  [
                     const PopupMenuItem<String>(
                       value: 'notify',
-                      child: Text('Notify Now'),
+                      child: Text('Send Reminder Now'),
                     ),
                     const PopupMenuItem<String>(
                       value: 'edit',
@@ -413,7 +414,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,  // Two columns
+        crossAxisCount: 2, // Two columns
         childAspectRatio: 0.85,
         crossAxisSpacing: 12.0,
         mainAxisSpacing: 12.0,
@@ -448,7 +449,8 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                                 // Show a tip about reordering in list view
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Switch to list view for reordering'),
+                                    content: Text(
+                                        'Switch to list view for reordering'),
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
@@ -457,7 +459,8 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                                   _isGridView = false;
                                 });
                               },
-                              child: const Icon(Icons.drag_handle, size: 16, color: Colors.grey),
+                              child: const Icon(Icons.drag_handle, size: 16,
+                                  color: Colors.grey),
                             ),
                             const SizedBox(width: 4),
                             Expanded(
@@ -493,54 +496,14 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
 
                   // Task description
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          task.description,
-                          style: TextStyle(
-                            color: Colors.grey.shade700,
-                            fontSize: 14.0,
-                          ),
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const Spacer(),
-                        // Show interval info
-                        Row(
-                          children: [
-                            const Icon(Icons.timer, size: 14, color: Colors.grey),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$_intervalMinutes min',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (task.lastNotificationTime != null) ...[
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Icon(Icons.notifications, size: 14, color: Colors.grey),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  'Last: ${_formatDateTime(task.lastNotificationTime!)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
+                    child: Text(
+                      task.description,
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 14.0,
+                      ),
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
 
@@ -563,7 +526,8 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'You need to click the task ${3 - task.clickCount} more time(s) before you can edit it.',
+                                'You need to click the task ${3 - task
+                                    .clickCount} more time(s) before you can edit it.',
                               ),
                               duration: const Duration(seconds: 2),
                             ),
@@ -587,38 +551,16 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     );
   }
 
-  // Format DateTime to a readable string
-  String _formatDateTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else {
-      return '${difference.inDays}d ago';
-    }
-  }
-
   // Handle menu selection (notify, edit, or delete)
   void _handleMenuSelection(String value, Task task) {
     switch (value) {
       case 'notify':
         if (_notificationsEnabled) {
-          // Show immediate notification
-          NotificationController.scheduleTaskReminder(
-            taskId: task.id,
-            taskName: task.name,
-            taskDescription: task.description,
-            intervalMinutes: 0, // Immediate notification
+          // Show immediate notification about the specific task
+          NotificationController.sendImmediateNotification(
+            title: task.name,
+            message: task.description,
           );
-
-          setState(() {
-            task.updateLastNotificationTime();
-          });
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -639,7 +581,8 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'You need to click the task ${3 - task.clickCount} more time(s) before you can edit it.',
+                'You need to click the task ${3 -
+                    task.clickCount} more time(s) before you can edit it.',
               ),
               duration: const Duration(seconds: 2),
             ),
@@ -666,9 +609,9 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
         _tasks.add(result);
       });
 
-      // Schedule notification for the new task if enabled
+      // Update app-wide notifications with the new task count
       if (_notificationsEnabled) {
-        _scheduleTaskNotification(result);
+        _scheduleAppNotifications();
       }
     }
   }
@@ -689,9 +632,9 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
           _tasks[index] = result;
         });
 
-        // Reschedule notification for updated task if enabled
+        // Update app-wide notifications with the updated task
         if (_notificationsEnabled) {
-          _scheduleTaskNotification(result);
+          _scheduleAppNotifications();
         }
       }
     }
@@ -699,11 +642,16 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
 
   // Delete a task
   void _deleteTask(Task task) {
-    // Cancel any scheduled notifications for this task
-    NotificationService.cancelNotification(task.id);
-
     setState(() {
       _tasks.remove(task);
     });
+
+    // Update app-wide notifications after removing a task
+    if (_notificationsEnabled && _tasks.isNotEmpty) {
+      _scheduleAppNotifications();
+    } else if (_notificationsEnabled && _tasks.isEmpty) {
+      // If this was the last task, cancel all notifications
+      NotificationService.cancelAllPeriodicNotifications();
+    }
   }
 }

@@ -95,12 +95,11 @@ class NotificationController {
     debugPrint('Notification dismissed');
   }
 
-  // Schedule task reminder notifications based on the interval
-  static Future<void> scheduleTaskReminder({
-    required String taskId,
-    required String taskName,
-    required String taskDescription,
+  // Schedule app-wide periodic reminders
+  static Future<void> scheduleAppReminders({
     required int intervalMinutes,
+    String title = 'Task Reminder',
+    String? message,
   }) async {
     // Check if notifications are allowed
     bool isAllowed = await NotificationService.checkPermissions();
@@ -113,17 +112,40 @@ class NotificationController {
       }
     }
 
-    // Cancel any existing notifications for this task
-    await NotificationService.cancelNotification(taskId);
+    // Default message if none provided
+    final notificationMessage = message ?? 'Don\'t forget to check your tasks!';
 
-    // Schedule the new notification
-    await NotificationService.scheduleTaskNotification(
-      taskId: taskId,
-      taskName: taskName,
-      taskDescription: taskDescription,
+    // Schedule periodic app-wide notifications
+    await NotificationService.scheduleAppReminders(
+      title: title,
+      body: notificationMessage,
       intervalMinutes: intervalMinutes,
     );
 
-    debugPrint('Scheduled notification for $taskName in $intervalMinutes minutes');
+    debugPrint('Scheduled app-wide reminders every $intervalMinutes minutes');
+  }
+
+  // Send an immediate notification
+  static Future<void> sendImmediateNotification({
+    required String title,
+    required String message,
+  }) async {
+    // Check if notifications are allowed
+    bool isAllowed = await NotificationService.checkPermissions();
+
+    if (!isAllowed) {
+      isAllowed = await NotificationService.requestPermissions();
+      if (!isAllowed) {
+        debugPrint('Notification permission was denied');
+        return;
+      }
+    }
+
+    await NotificationService.showImmediateNotification(
+      title: title,
+      body: message,
+    );
+
+    debugPrint('Sent immediate notification: $title');
   }
 }

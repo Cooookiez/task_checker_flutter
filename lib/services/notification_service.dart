@@ -46,48 +46,80 @@ class NotificationService {
     return result;
   }
 
-  // Schedule a notification for a specific task
-  static Future<void> scheduleTaskNotification({
-    required String taskId,
-    required String taskName,
-    required String taskDescription,
+  // Schedule app-wide periodic notifications
+  static Future<void> scheduleAppReminders({
+    required String title,
+    required String body,
     required int intervalMinutes,
   }) async {
-    // Generate a unique notification ID
-    final notificationId = taskId.hashCode;
+    // Cancel any existing periodic notifications
+    await cancelAllPeriodicNotifications();
 
-    // Calculate the next notification time based on the interval
-    final scheduleTime = DateTime.now().add(Duration(minutes: intervalMinutes));
+    // Generate a constant ID for app-wide notifications
+    const int notificationId = 1000;
 
-    await AwesomeNotifications().createNotification(
-      content: NotificationContent(
-        id: notificationId,
-        channelKey: 'task_checker_channel',
-        title: taskName,
-        body: taskDescription,
-        notificationLayout: NotificationLayout.Default,
-        category: NotificationCategory.Reminder,
-        wakeUpScreen: true,
-      ),
-      schedule: NotificationCalendar.fromDate(date: scheduleTime),
-    );
+    // Only schedule if interval is greater than 0
+    if (intervalMinutes > 0) {
+      // For the first immediate notification after the interval
+      final DateTime firstScheduleTime = DateTime.now().add(Duration(minutes: intervalMinutes));
+
+      await AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: notificationId,
+          channelKey: 'task_checker_channel',
+          title: title,
+          body: body,
+          notificationLayout: NotificationLayout.Default,
+          category: NotificationCategory.Reminder,
+          wakeUpScreen: true,
+        ),
+        schedule: NotificationCalendar.fromDate(
+          date: firstScheduleTime,
+        ),
+      );
+
+      // For now, we'll use a simpler approach that works across platforms
+      // This will schedule notifications at fixed times separated by the interval
+      // We'll schedule up to 24 hours of notifications to ensure coverage
+      const int maxSchedules = 24; // Maximum number of notifications to schedule (24 hours)
+      int schedulesToCreate = (60 * 24) ~/ intervalMinutes; // How many fit in 24 hours
+      schedulesToCreate = schedulesToCreate > maxSchedules ? maxSchedules : schedulesToCreate;
+
+      for (int i = 1; i <= schedulesToCreate; i++) {
+        final DateTime scheduleTime = firstScheduleTime.add(Duration(minutes: intervalMinutes * i));
+
+        await AwesomeNotifications().createNotification(
+          content: NotificationContent(
+            id: notificationId + i,
+            channelKey: 'task_checker_channel',
+            title: title,
+            body: body,
+            notificationLayout: NotificationLayout.Default,
+            category: NotificationCategory.Reminder,
+            wakeUpScreen: true,
+          ),
+          schedule: NotificationCalendar.fromDate(
+            date: scheduleTime,
+          ),
+        );
+      }
+    }
   }
 
   // Create immediate notification
-  static Future<void> showTaskNotification({
-    required String taskId,
-    required String taskName,
-    required String taskDescription,
+  static Future<void> showImmediateNotification({
+    required String title,
+    required String body,
   }) async {
     // For immediate notifications
-    final notificationId = taskId.hashCode + Random().nextInt(1000);
+    final notificationId = Random().nextInt(1000) + 2000; // Different range from periodic notifications
 
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
         id: notificationId,
         channelKey: 'task_checker_channel',
-        title: taskName,
-        body: taskDescription,
+        title: title,
+        body: body,
         notificationLayout: NotificationLayout.Default,
         category: NotificationCategory.Reminder,
         wakeUpScreen: true,
@@ -95,10 +127,18 @@ class NotificationService {
     );
   }
 
-  // Cancel a specific notification
-  static Future<void> cancelNotification(String taskId) async {
-    final notificationId = taskId.hashCode;
-    await AwesomeNotifications().cancel(notificationId);
+  // Cancel all periodic notifications
+  static Future<void> cancelAllPeriodicNotifications() async {
+    const int baseNotificationId = 1000;
+    const int maxSchedules = 24;
+
+    // Cancel the first notification
+    await AwesomeNotifications().cancel(baseNotificationId);
+
+    // Cancel all scheduled notifications
+    for (int i = 1; i <= maxSchedules; i++) {
+      await AwesomeNotifications().cancel(baseNotificationId + i);
+    }
   }
 
   // Cancel all notifications
