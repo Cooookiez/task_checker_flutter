@@ -4,10 +4,14 @@ import 'package:flutter/material.dart';
 import 'screens/add_edit_task_screen.dart';
 import 'screens/event_list_screen.dart';
 import 'services/notification_controller.dart';
+import 'services/task_database_service.dart';
 
 void main() async {
   // Ensure Flutter is initialized before using any platform channels
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize database
+  final db = await TaskDatabaseService.instance.database;
 
   // Initialize notifications
   await NotificationController.initializeLocalNotifications();

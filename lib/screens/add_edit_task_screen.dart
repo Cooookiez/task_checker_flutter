@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/Task.dart';
+import '../services/task_database_service.dart';
 
 class AddEditTaskScreen extends StatefulWidget {
   static const String id = 'AddEditTaskScreen';
@@ -42,6 +43,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   // Create task from form data
   Task _createTaskFromForm() {
     return Task(
+      id: widget.task?.id, // Keep original ID when editing
       name: _nameController.text.trim(),
       description: _descriptionController.text.trim(),
       clickCount: widget.task?.clickCount ?? 0,
@@ -49,9 +51,16 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   }
 
   // Save the task and return to previous screen
-  void _saveTask() {
+  Future<void> _saveTask() async {
     if (_formKey.currentState!.validate()) {
       final task = _createTaskFromForm();
+
+      // If this is a new task (not editing), save to database
+      // The saving to database for edits is handled in EventListScreen
+      if (!_isEditMode) {
+        await TaskDatabaseService.instance.insertTask(task);
+      }
+
       Navigator.pop(context, task);
     }
   }

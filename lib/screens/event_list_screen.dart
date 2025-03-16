@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:task_checker_flutter/services/notification_controller.dart';
 import 'package:task_checker_flutter/services/notification_service.dart';
 
+import '../services/task_database_service.dart';
+
 class EventListScreen extends StatefulWidget {
   static const String id = 'EventListScreen';
 
@@ -44,6 +46,9 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
 
     // Check if notifications are allowed
     _checkNotificationPermissions();
+
+    // Load tasks from database
+    _loadTasks();
   }
 
   @override
@@ -595,6 +600,24 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
+  // Load tasks from database
+  Future<void> _loadTasks() async {
+    try {
+      final tasks = await TaskDatabaseService.instance.getTasks();
+      setState(() {
+        _tasks.clear();
+        _tasks.addAll(tasks);
+      });
+
+      // Update notifications after loading tasks
+      if (_notificationsEnabled) {
+        _scheduleAppNotifications();
+      }
+    } catch (e) {
+      debugPrint('Error loading tasks: $e');
+    }
+  }
+
   // Add a new task
   Future<void> _addTask() async {
     final result = await Navigator.push(
@@ -605,6 +628,10 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     );
 
     if (result != null && result is Task) {
+      // Add to database first
+      await TaskDatabaseService.instance.insertTask(result);
+
+      // Then update UI
       setState(() {
         _tasks.add(result);
       });
@@ -628,6 +655,10 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
       );
 
       if (result != null && result is Task) {
+        // Update in database first
+        await TaskDatabaseService.instance.updateTask(result);
+
+        // Then update UI
         setState(() {
           _tasks[index] = result;
         });
@@ -641,7 +672,11 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
   }
 
   // Delete a task
-  void _deleteTask(Task task) {
+  Future<void> _deleteTask(Task task) async {
+    // Delete from database first
+    await TaskDatabaseService.instance.deleteTask(task.id);
+
+    // Then update UI
     setState(() {
       _tasks.remove(task);
     });
