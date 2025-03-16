@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:task_checker_flutter/models/Task.dart';
+
+import '../models/Task.dart';
 
 class AddEditTaskScreen extends StatefulWidget {
   static const String id = 'AddEditTaskScreen';
