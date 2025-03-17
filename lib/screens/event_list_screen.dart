@@ -57,9 +57,13 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // When app resumes from background, schedule notifications based on current interval
+    // When app resumes from background, check notification permission and reschedule if needed
     if (state == AppLifecycleState.resumed) {
-      _scheduleAppNotifications();
+      _checkNotificationPermissions().then((_) {
+        if (_notificationsEnabled) {
+          _scheduleAppNotifications();
+        }
+      });
     }
   }
 
@@ -126,14 +130,29 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
 
     // Only schedule notifications if there are tasks
     if (_tasks.isNotEmpty) {
+      // Create an appropriate message based on tasks
+      String message = _getNotificationMessage();
+
       NotificationController.scheduleAppReminders(
         intervalMinutes: _intervalMinutes,
         title: 'Task Reminder',
-        message: _getNotificationMessage(),
+        message: message,
       );
     } else {
       // If there are no tasks, cancel any scheduled notifications
       NotificationService.cancelAllPeriodicNotifications();
+    }
+  }
+
+  Future<void> _checkScheduledNotifications() async {
+    if (_notificationsEnabled) {
+      // Check if we have any scheduled notifications
+      final hasScheduled = await NotificationService.hasScheduledNotifications();
+
+      if (!hasScheduled && _tasks.isNotEmpty) {
+        // If notifications are enabled but none are scheduled, reschedule them
+        _scheduleAppNotifications();
+      }
     }
   }
 

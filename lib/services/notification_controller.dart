@@ -30,6 +30,26 @@ class NotificationController {
       onNotificationDisplayedMethod: onNotificationDisplayedMethod,
       onDismissActionReceivedMethod: onDismissActionReceivedMethod,
     );
+
+    // Check if we need to reschedule notifications on app start
+    _checkAndRescheduleNotifications();
+  }
+
+  // Check and reschedule notifications if needed
+  static Future<void> _checkAndRescheduleNotifications() async {
+    final settingsService = NotificationSettingsService();
+    final isEnabled = await settingsService.getEnabled();
+
+    if (isEnabled) {
+      // Check if we have any scheduled notifications
+      final hasScheduled = await NotificationService.hasScheduledNotifications();
+
+      if (!hasScheduled) {
+        // If notifications are enabled but none are scheduled, reschedule them
+        final interval = await settingsService.getInterval();
+        scheduleAppReminders(intervalMinutes: interval);
+      }
+    }
   }
 
   // To handle notification actions in background
@@ -55,13 +75,15 @@ class NotificationController {
     // Listen to the port for notification actions
     port.listen((received) {
       // Handle notification actions received through the port
+      _checkAndRescheduleNotifications();
     });
   }
 
   // Handle notification actions
   @pragma('vm:entry-point')
   static Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
-    final payload = receivedAction.payload;
+    // Check if we need to reschedule notifications after action
+    _checkAndRescheduleNotifications();
 
     // Navigate to the appropriate screen based on the notification action
     if (receivedAction.channelKey == 'task_checker_channel') {
@@ -74,9 +96,6 @@ class NotificationController {
           EventListScreen.id,
               (route) => route.isFirst,
         );
-
-        // Note: The state will be preserved because we're now loading it from
-        // persistent storage in the EventListScreen's initState
       }
     }
   }
@@ -93,6 +112,9 @@ class NotificationController {
   static Future<void> onNotificationDisplayedMethod(ReceivedNotification receivedNotification) async {
     // You can implement custom logic when a notification is displayed
     debugPrint('Notification displayed: ${receivedNotification.title}');
+
+    // Optional: Check and reschedule if needed
+    await _checkAndRescheduleNotifications();
   }
 
   // Called when a notification is dismissed
@@ -132,6 +154,9 @@ class NotificationController {
       body: notificationMessage,
       intervalMinutes: actualInterval,
     );
+
+    // Save that notifications are enabled
+    await NotificationSettingsService().saveEnabled(true);
 
     debugPrint('Scheduled app-wide reminders every $actualInterval minutes');
   }
