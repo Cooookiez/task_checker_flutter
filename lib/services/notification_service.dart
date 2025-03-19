@@ -169,7 +169,6 @@ class NotificationService {
   // Create immediate notification
   static Future<void> showImmediateNotification({
     required String title,
-    required String body,
     int? id,
   }) async {
     // For immediate notifications
@@ -180,7 +179,6 @@ class NotificationService {
         id: notificationId,
         channelKey: 'task_checker_channel',
         title: title,
-        body: body,
         notificationLayout: NotificationLayout.Default,
         category: NotificationCategory.Reminder,
         wakeUpScreen: true,

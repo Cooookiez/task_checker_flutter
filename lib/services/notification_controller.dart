@@ -164,7 +164,6 @@ class NotificationController {
   // Send an immediate notification
   static Future<void> sendImmediateNotification({
     required String title,
-    required String message,
   }) async {
     // Check if notifications are allowed
     bool isAllowed = await NotificationService.checkPermissions();
@@ -179,7 +178,6 @@ class NotificationController {
 
     await NotificationService.showImmediateNotification(
       title: title,
-      body: message,
     );
 
     debugPrint('Sent immediate notification: $title');

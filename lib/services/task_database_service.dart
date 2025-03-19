@@ -21,7 +21,6 @@ class TaskDatabaseService {
   // Column names
   static const String columnId = 'id';
   static const String columnName = 'name';
-  static const String columnDescription = 'description';
   static const String columnClickCount = 'click_count';
 
   // Get database instance
@@ -49,7 +48,6 @@ class TaskDatabaseService {
       CREATE TABLE $tableTask (
         $columnId TEXT PRIMARY KEY,
         $columnName TEXT NOT NULL,
-        $columnDescription TEXT NOT NULL,
         $columnClickCount INTEGER NOT NULL
       )
     ''');
@@ -62,7 +60,6 @@ class TaskDatabaseService {
     final Map<String, dynamic> taskMap = {
       columnId: task.id,
       columnName: task.name,
-      columnDescription: task.description,
       columnClickCount: task.clickCount,
     };
     return await db.insert(
@@ -82,7 +79,6 @@ class TaskDatabaseService {
       return Task(
         id: maps[i][columnId],
         name: maps[i][columnName],
-        description: maps[i][columnDescription],
         clickCount: maps[i][columnClickCount],
       );
     });
@@ -95,7 +91,6 @@ class TaskDatabaseService {
     final Map<String, dynamic> taskMap = {
       columnId: task.id,
       columnName: task.name,
-      columnDescription: task.description,
       columnClickCount: task.clickCount,
     };
     return await db.update(

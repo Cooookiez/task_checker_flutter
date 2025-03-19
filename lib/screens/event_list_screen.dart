@@ -167,19 +167,6 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  // Send an immediate app-wide notification
-  void _sendImmediateNotification() {
-    if (!_notificationsEnabled) {
-      _showEnableNotificationsDialog();
-      return;
-    }
-
-    NotificationController.sendImmediateNotification(
-      title: 'Task Reminder',
-      message: _getNotificationMessage(),
-    );
-  }
-
   // Show dialog to enable notifications
   void _showEnableNotificationsDialog() {
     showDialog(
@@ -424,7 +411,6 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
               task.name,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text(task.description),
             leading: ReorderableDragStartListener(
               index: index,
               child: const Icon(Icons.drag_handle),
@@ -446,10 +432,6 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                   onSelected: (value) => _handleMenuSelection(value, task),
                   itemBuilder: (BuildContext context) =>
                   [
-                    const PopupMenuItem<String>(
-                      value: 'notify',
-                      child: Text('Send Reminder Now'),
-                    ),
                     const PopupMenuItem<String>(
                       value: 'edit',
                       child: Text('Edit'),
@@ -559,28 +541,10 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
 
                   const Divider(height: 16.0),
 
-                  // Task description
-                  Expanded(
-                    child: Text(
-                      task.description,
-                      style: TextStyle(
-                        color: Colors.grey.shade700,
-                        fontSize: 14.0,
-                      ),
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-
                   // Actions row at the bottom
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      // Notify button
-                      IconButton(
-                        icon: const Icon(Icons.notifications_active, size: 20),
-                        onPressed: () => _handleMenuSelection('notify', task),
-                      ),
 
                       // Edit button
                       IconButton(
@@ -616,43 +580,11 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     );
   }
 
-  // Handle menu selection (notify, edit, or delete)
+  // Handle menu selection (edit, or delete)
   void _handleMenuSelection(String value, Task task) {
     switch (value) {
-      case 'notify':
-        if (_notificationsEnabled) {
-          // Show immediate notification about the specific task
-          NotificationController.sendImmediateNotification(
-            title: task.name,
-            message: task.description,
-          );
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Notification sent!'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        } else {
-          // Prompt to enable notifications
-          _showEnableNotificationsDialog();
-        }
-        break;
       case 'edit':
-        if (task.clickCount >= 3) {
-          _editTask(task);
-        } else {
-          // Show a message that the task can only be edited after clicking 3 times
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'You need to click the task ${3 -
-                    task.clickCount} more time(s) before you can edit it.',
-              ),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
+        _editTask(task);
         break;
       case 'delete':
         _deleteTask(task);

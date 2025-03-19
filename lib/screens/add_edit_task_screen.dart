@@ -19,7 +19,6 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
 
   // Text editing controllers
   late TextEditingController _nameController;
-  late TextEditingController _descriptionController;
 
   // Determine if we're in edit mode
   bool get _isEditMode => widget.task != null;
@@ -29,14 +28,12 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     super.initState();
     // Initialize controllers with existing values if in edit mode
     _nameController = TextEditingController(text: widget.task?.name ?? '');
-    _descriptionController = TextEditingController(text: widget.task?.description ?? '');
   }
 
   @override
   void dispose() {
     // Clean up controllers when the widget is disposed
     _nameController.dispose();
-    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -45,7 +42,6 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     return Task(
       id: widget.task?.id, // Keep original ID when editing
       name: _nameController.text.trim(),
-      description: _descriptionController.text.trim(),
       clickCount: widget.task?.clickCount ?? 0,
     );
   }
@@ -101,23 +97,6 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 16),
-
-              // Task description field
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a description';
-                  }
-                  return null;
-                },
-                maxLines: 5,
-              ),
 
               // Display click count if in edit mode
               if (_isEditMode) ...[
