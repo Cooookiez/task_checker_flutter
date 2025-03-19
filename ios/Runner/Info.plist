@@ -45,5 +45,12 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+  <array>
+      <string>fetch</string>
+      <string>remote-notification</string>
+  </array>
+  <key>NSUserNotificationUsageDescription</key>
+  <string>We need to send you notifications for task reminders</string>
 </dict>
 </plist>
