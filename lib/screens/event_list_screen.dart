@@ -198,7 +198,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Task Checker'),
+        title: const Text('SnapClick'),
         actions: [
           // Notification toggle button
           IconButton(

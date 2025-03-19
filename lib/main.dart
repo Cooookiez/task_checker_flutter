@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       // Set the navigator key
       navigatorKey: navigatorKey,
-      title: 'Task Checker',
+      title: 'SnapClick',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
