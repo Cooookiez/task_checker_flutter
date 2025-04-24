@@ -20,6 +20,9 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   // Text editing controllers
   late TextEditingController _nameController;
 
+  // Selected category - initialize from existing task or default to none
+  late TaskCategory _selectedCategory;
+
   // Determine if we're in edit mode
   bool get _isEditMode => widget.task != null;
 
@@ -28,6 +31,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     super.initState();
     // Initialize controllers with existing values if in edit mode
     _nameController = TextEditingController(text: widget.task?.name ?? '');
+    _selectedCategory = widget.task?.category ?? TaskCategory.none;
   }
 
   @override
@@ -43,6 +47,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       id: widget.task?.id, // Keep original ID when editing
       name: _nameController.text.trim(),
       clickCount: widget.task?.clickCount ?? 0,
+      category: _selectedCategory,
     );
   }
 
@@ -96,7 +101,43 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                 },
                 textInputAction: TextInputAction.next,
               ),
+
               const SizedBox(height: 16),
+
+              Text(
+                'Category',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+
+              const SizedBox(height: 8),
+
+              // VA, NVA, NVA-R
+              SegmentedButton<TaskCategory>(
+                segments: const [
+                  ButtonSegment<TaskCategory>(
+                    value: TaskCategory.none,
+                    label: Text('None'),
+                  ),
+                  ButtonSegment<TaskCategory>(
+                    value: TaskCategory.va,
+                    label: Text('VA'),
+                  ),
+                  ButtonSegment<TaskCategory>(
+                    value: TaskCategory.nva,
+                    label: Text('NVA'),
+                  ),
+                  ButtonSegment<TaskCategory>(
+                    value: TaskCategory.nvar,
+                    label: Text('NVA-R'),
+                  ),
+                ],
+                selected: <TaskCategory>{_selectedCategory},
+                onSelectionChanged: (Set<TaskCategory> newSelection) {
+                  setState(() {
+                    _selectedCategory = newSelection.first;
+                  });
+                },
+              ),
 
               // Display click count if in edit mode
               if (_isEditMode) ...[

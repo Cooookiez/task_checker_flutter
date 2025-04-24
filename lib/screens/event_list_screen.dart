@@ -6,6 +6,10 @@ import 'package:snapclick/services/notification_controller.dart';
 import 'package:snapclick/services/notification_service.dart';
 import 'package:snapclick/services/notification_settings_service.dart';
 
+import '../models/Task.dart';
+import '../services/notification_controller.dart';
+import '../services/notification_service.dart';
+import '../services/notification_settings_service.dart';
 import '../services/task_database_service.dart';
 
 class EventListScreen extends StatefulWidget {
@@ -411,6 +415,28 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
               task.name,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
+            subtitle: Row(
+              children: [
+                // Only show category badge if category is not 'none'
+                if (task.category != TaskCategory.none)
+                  Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getCategoryColor(task.category),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      task.getCategoryDisplayName(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _getCategoryColor(task.category).computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             leading: ReorderableDragStartListener(
               index: index,
               child: const Icon(Icons.drag_handle),
@@ -539,7 +565,28 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
                     ],
                   ),
 
+                  if (task.category != TaskCategory.none)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getCategoryColor(task.category),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        task.getCategoryDisplayName(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: _getCategoryColor(task.category).computeLuminance() > 0.5 ?
+                          Colors.black : Colors.white,
+                        ),
+                      ),
+                    ),
+
                   const Divider(height: 16.0),
+
+                  Spacer(),
 
                   // Actions row at the bottom
                   Row(
@@ -578,6 +625,20 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
         );
       },
     );
+  }
+
+  Color _getCategoryColor(TaskCategory category) {
+    switch (category) {
+      case TaskCategory.va:
+        return Colors.green[200]!;
+      case TaskCategory.nva:
+        return Colors.red[200]!;
+      case TaskCategory.nvar:
+        return Colors.amber[200]!;
+      case TaskCategory.none:
+      default:
+        return Colors.transparent;
+    }
   }
 
   // Handle menu selection (edit, or delete)
