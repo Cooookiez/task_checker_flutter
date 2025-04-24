@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:snapclick/models/Task.dart';
 import 'package:snapclick/screens/add_edit_task_screen.dart';
@@ -7,10 +8,12 @@ import 'package:snapclick/services/notification_service.dart';
 import 'package:snapclick/services/notification_settings_service.dart';
 
 import '../models/Task.dart';
+import '../services/demo_data_service.dart';
 import '../services/notification_controller.dart';
 import '../services/notification_service.dart';
 import '../services/notification_settings_service.dart';
 import '../services/task_database_service.dart';
+import 'add_edit_task_screen.dart';
 
 class EventListScreen extends StatefulWidget {
   static const String id = 'EventListScreen';
@@ -22,19 +25,19 @@ class EventListScreen extends StatefulWidget {
 }
 
 class _EventListScreenState extends State<EventListScreen> with WidgetsBindingObserver {
-  // List to store tasks
+  /// List to store tasks
   final List<Task> _tasks = [];
 
-  // View mode state (list or grid)
+  /// View mode state (list or grid)
   bool _isGridView = false;
 
-  // Time interval in minutes
+  /// Time interval in minutes
   int _intervalMinutes = 5;
 
-  // Available interval options
+  /// Available interval options
   final List<int> _intervalOptions = [1, 2, 5, 10, 15, 30, 60];
 
-  // Whether notifications are enabled
+  /// Whether notifications are enabled
   bool _notificationsEnabled = false;
 
   @override
@@ -71,7 +74,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  // Load saved notification settings
+  /// Load saved notification settings
   Future<void> _loadNotificationSettings() async {
     final settingsService = NotificationSettingsService();
 
@@ -94,7 +97,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     _checkNotificationPermissions();
   }
 
-  // Check if notifications are allowed
+  /// Check if notifications are allowed
   Future<void> _checkNotificationPermissions() async {
     final isAllowed = await NotificationService.checkPermissions();
     final settingsService = NotificationSettingsService();
@@ -112,7 +115,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  // Request notification permissions
+  /// Request notification permissions
   Future<void> _requestNotificationPermissions() async {
     final isAllowed = await NotificationService.requestPermissions();
 
@@ -128,7 +131,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  // Schedule app-wide notifications with the current interval
+  /// Schedule app-wide notifications with the current interval
   void _scheduleAppNotifications() {
     if (!_notificationsEnabled) return;
 
@@ -160,7 +163,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  // Get a message for notifications based on the number of tasks
+  /// Get a message for notifications based on the number of tasks
   String _getNotificationMessage() {
     if (_tasks.isEmpty) {
       return 'No tasks yet. Add some tasks to get started!';
@@ -171,7 +174,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  // Show dialog to enable notifications
+  /// Show dialog to enable notifications
   void _showEnableNotificationsDialog() {
     showDialog(
       context: context,
@@ -204,14 +207,17 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
       appBar: AppBar(
         title: const Text('SnapClick'),
         actions: [
+          if (kDebugMode)
+            IconButton(
+              icon: const Icon(Icons.dataset),
+              tooltip: 'Load Demo Data',
+              onPressed: _showDemoDataMenu,
+            ),
+
           // Notification toggle button
           IconButton(
-            icon: Icon(_notificationsEnabled
-                ? Icons.notifications_active
-                : Icons.notifications_off),
-            tooltip: _notificationsEnabled
-                ? 'Notifications enabled'
-                : 'Notifications disabled',
+            icon: Icon(_notificationsEnabled ? Icons.notifications_active : Icons.notifications_off),
+            tooltip: _notificationsEnabled ? 'Notifications enabled' : 'Notifications disabled',
             onPressed: () {
               if (_notificationsEnabled) {
                 // Disable notifications
@@ -386,7 +392,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     );
   }
 
-  // Build list view of tasks with reordering
+  /// Build list view of tasks with reordering
   Widget _buildListView() {
     return ReorderableListView.builder(
       itemCount: _tasks.length,
@@ -482,7 +488,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     );
   }
 
-  // Build grid view of tasks
+  /// Build grid view of tasks
   Widget _buildGridView() {
     return GridView.builder(
       padding: const EdgeInsets.all(16.0),
@@ -641,7 +647,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  // Handle menu selection (edit, or delete)
+  /// Handle menu selection (edit, or delete)
   void _handleMenuSelection(String value, Task task) {
     switch (value) {
       case 'edit':
@@ -653,7 +659,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  // Load tasks from database
+  /// Load tasks from database
   Future<void> _loadTasks() async {
     try {
       final tasks = await TaskDatabaseService.instance.getTasks();
@@ -671,7 +677,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  // Add a new task
+  /// Add a new task
   Future<void> _addTask() async {
     final result = await Navigator.push(
       context,
@@ -696,7 +702,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  // Edit an existing task
+  /// Edit an existing task
   Future<void> _editTask(Task task) async {
     final index = _tasks.indexOf(task);
     if (index != -1) {
@@ -724,7 +730,7 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  // Delete a task
+  /// Delete a task
   Future<void> _deleteTask(Task task) async {
     // Delete from database first
     await TaskDatabaseService.instance.deleteTask(task.id);
@@ -740,6 +746,81 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     } else if (_notificationsEnabled && _tasks.isEmpty) {
       // If this was the last task, cancel all notifications
       NotificationService.cancelAllPeriodicNotifications();
+    }
+  }
+
+  Future<void> _showDemoDataMenu() async {
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Demo Data Options'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'add'),
+            child: const Text('Add Demo Tasks'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'reset'),
+            child: const Text('Reset With Demo Tasks'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'clear'),
+            child: const Text('Clear All Tasks'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, 'cancel'),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (selected == null || selected == 'cancel') return;
+
+    final demoService = DemoDataService();
+
+    switch (selected) {
+      case 'add':
+        final demoTasks = await demoService.loadAllDemoTasks();
+        setState(() {
+          _tasks.addAll(demoTasks);
+        });
+        _showSuccessMessage('Demo tasks added');
+        break;
+
+      case 'reset':
+        final demoTasks = await demoService.resetWithDemoTasks();
+        setState(() {
+          _tasks.clear();
+          _tasks.addAll(demoTasks);
+        });
+        _showSuccessMessage('Reset with demo tasks');
+        break;
+
+      case 'clear':
+        await demoService.clearAllTasks();
+        setState(() {
+          _tasks.clear();
+        });
+        _showSuccessMessage('All tasks cleared');
+        break;
+    }
+
+    // Update notifications if enabled
+    if (_notificationsEnabled) {
+      _scheduleAppNotifications();
+    }
+  }
+
+// Helper method to show success messages
+  void _showSuccessMessage(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 }
