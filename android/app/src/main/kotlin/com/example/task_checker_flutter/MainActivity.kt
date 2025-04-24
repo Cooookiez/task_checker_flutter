@@ -1,4 +1,4 @@
-package com.example.task_checker_flutter
+package app.kukiz.snapclick
 
 import io.flutter.embedding.android.FlutterActivity
 

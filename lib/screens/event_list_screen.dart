@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:task_checker_flutter/models/Task.dart';
-import 'package:task_checker_flutter/screens/add_edit_task_screen.dart';
+import 'package:snapclick/models/Task.dart';
+import 'package:snapclick/screens/add_edit_task_screen.dart';
 import 'package:flutter/services.dart';
-import 'package:task_checker_flutter/services/notification_controller.dart';
-import 'package:task_checker_flutter/services/notification_service.dart';
-import 'package:task_checker_flutter/services/notification_settings_service.dart';
+import 'package:snapclick/services/notification_controller.dart';
+import 'package:snapclick/services/notification_service.dart';
+import 'package:snapclick/services/notification_settings_service.dart';
 
 import '../services/task_database_service.dart';
 
