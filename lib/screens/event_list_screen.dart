@@ -74,133 +74,6 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
     }
   }
 
-  /// Load saved notification settings
-  Future<void> _loadNotificationSettings() async {
-    final settingsService = NotificationSettingsService();
-
-    // Load interval
-    final savedInterval = await settingsService.getInterval();
-    // Ensure the loaded interval is valid (exists in options)
-    final validInterval = _intervalOptions.contains(savedInterval)
-        ? savedInterval
-        : _intervalOptions.contains(5) ? 5 : _intervalOptions.first;
-
-    // Load enabled state
-    final isEnabled = await settingsService.getEnabled();
-
-    setState(() {
-      _intervalMinutes = validInterval;
-      _notificationsEnabled = isEnabled;
-    });
-
-    // Check if notifications are allowed by the system
-    _checkNotificationPermissions();
-  }
-
-  /// Check if notifications are allowed
-  Future<void> _checkNotificationPermissions() async {
-    final isAllowed = await NotificationService.checkPermissions();
-    final settingsService = NotificationSettingsService();
-
-    setState(() {
-      _notificationsEnabled = isAllowed;
-    });
-
-    // Save the current permission state
-    await settingsService.saveEnabled(isAllowed);
-
-    // If notifications are enabled, schedule app-wide notifications
-    if (isAllowed) {
-      _scheduleAppNotifications();
-    }
-  }
-
-  /// Request notification permissions
-  Future<void> _requestNotificationPermissions() async {
-    final isAllowed = await NotificationService.requestPermissions();
-
-    setState(() {
-      _notificationsEnabled = isAllowed;
-    });
-
-    // Save the enabled state
-    await NotificationSettingsService().saveEnabled(isAllowed);
-
-    if (isAllowed) {
-      _scheduleAppNotifications();
-    }
-  }
-
-  /// Schedule app-wide notifications with the current interval
-  void _scheduleAppNotifications() {
-    if (!_notificationsEnabled) return;
-
-    // Only schedule notifications if there are tasks
-    if (_tasks.isNotEmpty) {
-      // Create an appropriate message based on tasks
-      String message = _getNotificationMessage();
-
-      NotificationController.scheduleAppReminders(
-        intervalMinutes: _intervalMinutes,
-        title: 'Task Reminder',
-        message: message,
-      );
-    } else {
-      // If there are no tasks, cancel any scheduled notifications
-      NotificationService.cancelAllPeriodicNotifications();
-    }
-  }
-
-  Future<void> _checkScheduledNotifications() async {
-    if (_notificationsEnabled) {
-      // Check if we have any scheduled notifications
-      final hasScheduled = await NotificationService.hasScheduledNotifications();
-
-      if (!hasScheduled && _tasks.isNotEmpty) {
-        // If notifications are enabled but none are scheduled, reschedule them
-        _scheduleAppNotifications();
-      }
-    }
-  }
-
-  /// Get a message for notifications based on the number of tasks
-  String _getNotificationMessage() {
-    if (_tasks.isEmpty) {
-      return 'No tasks yet. Add some tasks to get started!';
-    } else if (_tasks.length == 1) {
-      return 'You have 1 task to check: ${_tasks.first.name}';
-    } else {
-      return 'You have ${_tasks.length} tasks to check';
-    }
-  }
-
-  /// Show dialog to enable notifications
-  void _showEnableNotificationsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) =>
-          AlertDialog(
-            title: const Text('Enable Notifications'),
-            content: const Text(
-                'Notifications are currently disabled. Would you like to enable them to receive task reminders?'
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('CANCEL'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _requestNotificationPermissions();
-                },
-                child: const Text('ENABLE'),
-              ),
-            ],
-          ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -390,6 +263,106 @@ class _EventListScreenState extends State<EventListScreen> with WidgetsBindingOb
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  /// Load saved notification settings
+  Future<void> _loadNotificationSettings() async {
+    final settingsService = NotificationSettingsService();
+
+    // Load interval
+    final savedInterval = await settingsService.getInterval();
+    // Ensure the loaded interval is valid (exists in options)
+    final validInterval = _intervalOptions.contains(savedInterval)
+        ? savedInterval
+        : _intervalOptions.contains(5) ? 5 : _intervalOptions.first;
+
+    // Load enabled state
+    final isEnabled = await settingsService.getEnabled();
+
+    setState(() {
+      _intervalMinutes = validInterval;
+      _notificationsEnabled = isEnabled;
+    });
+
+    // Check if notifications are allowed by the system
+    _checkNotificationPermissions();
+  }
+
+  /// Check if notifications are allowed
+  Future<void> _checkNotificationPermissions() async {
+    final isAllowed = await NotificationService.checkPermissions();
+    final settingsService = NotificationSettingsService();
+
+    setState(() {
+      _notificationsEnabled = isAllowed;
+    });
+
+    // Save the current permission state
+    await settingsService.saveEnabled(isAllowed);
+
+    // If notifications are enabled, schedule app-wide notifications
+    if (isAllowed) {
+      _scheduleAppNotifications();
+    }
+  }
+
+  /// Request notification permissions
+  Future<void> _requestNotificationPermissions() async {
+    final isAllowed = await NotificationService.requestPermissions();
+
+    setState(() {
+      _notificationsEnabled = isAllowed;
+    });
+
+    // Save the enabled state
+    await NotificationSettingsService().saveEnabled(isAllowed);
+
+    if (isAllowed) {
+      _scheduleAppNotifications();
+    }
+  }
+
+  /// Schedule app-wide notifications with the current interval
+  void _scheduleAppNotifications() {
+    if (!_notificationsEnabled) return;
+
+    // Only schedule notifications if there are tasks
+    if (_tasks.isNotEmpty) {
+      // Create an appropriate message based on tasks
+      String message = _getNotificationMessage();
+
+      NotificationController.scheduleAppReminders(
+        intervalMinutes: _intervalMinutes,
+        title: 'Task Reminder',
+        message: message,
+      );
+    } else {
+      // If there are no tasks, cancel any scheduled notifications
+      NotificationService.cancelAllPeriodicNotifications();
+    }
+  }
+
+  Future<void> _checkScheduledNotifications() async {
+    if (_notificationsEnabled) {
+      // Check if we have any scheduled notifications
+      final hasScheduled = await NotificationService.hasScheduledNotifications();
+
+      if (!hasScheduled && _tasks.isNotEmpty) {
+        // If notifications are enabled but none are scheduled, reschedule them
+        _scheduleAppNotifications();
+      }
+    }
+  }
+
+  /// Get a message for notifications based on the number of tasks
+  String _getNotificationMessage() {
+    if (_tasks.isEmpty) {
+      return 'No tasks yet. Add some tasks to get started!';
+    } else if (_tasks.length == 1) {
+      return 'You have 1 task to check: ${_tasks.first.name}';
+    } else {
+      return 'You have ${_tasks.length} tasks to check';
+    }
   }
 
   /// Build list view of tasks with reordering
